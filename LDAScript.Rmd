@@ -1,6 +1,6 @@
 ---
-title: "Latent Dirichlet Allocation Tutorial"
-author: "F. Jordan Srour"
+title: "Latent Dirichlet Allocation "
+author: "Aziz Al Mezraani"
 date: "9/15/2021"
 output: html_document
 ---
@@ -25,11 +25,14 @@ ShortAnswerQs<-read.csv("SurveyRawData.csv",stringsAsFactors = FALSE)
 In text analysis a corpus (a latin word meaning body) is a collection of text documents which you are interested in analyzing. In our data the text appears in the first three columns, which relate to the three open-ended questions that were asked about potential opportunities, programs, and whether the presence should be virtual or real. Thus we need to render each entry from each variable vector into a ``document'' within the corpus. Doing this requires the "tm" library.
 
 ```{r make corpus}
+# Load the 'tm' package for text mining
 library(tm)
 
-answerCorpus_Q1<-Corpus(VectorSource(ShortAnswerQs$Q1_Opps))
-answerCorpus_Q2<-Corpus(VectorSource(ShortAnswerQs$Q2_Progs))
-answerCorpus_Q3<-Corpus(VectorSource(ShortAnswerQs$Q3_Presence))
+# Create a text corpus for each short answer question
+# Each corpus will be processed separately for topic modeling
+answerCorpus_Q1 <- Corpus(VectorSource(ShortAnswerQs$Q1_Opps))
+answerCorpus_Q2 <- Corpus(VectorSource(ShortAnswerQs$Q2_Progs))
+answerCorpus_Q3 <- Corpus(VectorSource(ShortAnswerQs$Q3_Presence))
 ```
 
 ### Step 2: Text Pre-Processing
@@ -74,13 +77,15 @@ answerCorpus_Q3<-tm_map(answerCorpus_Q3, removePunctuation)
 The document-term matrix (dtm) is a matrix where each row is a review and each column (ie variable) is a word, the entries of the matrix indicate the prevalence of the word in the document. In contrast the term-document matrix (tdm) is the transpose of the dtm -- that is the rows are words and the columns are documents. Each has a different value in text analysis and thus it will be handy to create both.
 
 ```{r create dtm and tdm}
-answerQ1_dtm<-DocumentTermMatrix(answerCorpus_Q1)
-answerQ2_dtm<-DocumentTermMatrix(answerCorpus_Q2)
-answerQ3_dtm<-DocumentTermMatrix(answerCorpus_Q3)
+# Create Document-Term Matrices for each question
+answerQ1_dtm <- DocumentTermMatrix(answerCorpus_Q1)
+answerQ2_dtm <- DocumentTermMatrix(answerCorpus_Q2)
+answerQ3_dtm <- DocumentTermMatrix(answerCorpus_Q3)
 
-answerQ1_tdm<-TermDocumentMatrix(answerCorpus_Q1)
-answerQ2_tdm<-TermDocumentMatrix(answerCorpus_Q2)
-answerQ3_tdm<-TermDocumentMatrix(answerCorpus_Q3)
+# Create Term-Document Matrices for flexibility in visualization or analysis
+answerQ1_tdm <- TermDocumentMatrix(answerCorpus_Q1)
+answerQ2_tdm <- TermDocumentMatrix(answerCorpus_Q2)
+answerQ3_tdm <- TermDocumentMatrix(answerCorpus_Q3)
 ````
 ## Latent Dirichlet Allocation
 
@@ -99,6 +104,7 @@ row.sum<-apply(answerQ3_dtm,1,FUN=sum)
 answerQ3_dtm <- answerQ3_dtm[row.sum!=0,]
 
 #3 topics is a good size for this dataset
+# Fit 3-topic LDA models to each question's cleaned document-term matrix
 
 answersQ1_3Topics_lda<-LDA(answerQ1_dtm, k = 3)
 as.data.frame(get_terms(answersQ1_3Topics_lda, 10))
@@ -114,25 +120,31 @@ as.data.frame(get_terms(answersQ3_3Topics_lda, 10))
 Now we can visualize what the word probabilities within each topic look like. We will use the "wordcloud" package for this.
 
 ```{r LDA visualization}
+# Load tidy tools and plotting libraries for visualizing LDA results
 library(dplyr)
 library(tidytext)
 library(data.table)
 library(RColorBrewer)
 library(wordcloud)
+
+# Define a nice palette for topic word clouds
 dark2 <- brewer.pal(8, "Dark2") #creates a nice color palette
 ```
 
 ### Question 1
 
 ```{r Question 1 LDA Viz}
+# Tidy Q1 model: extract word-topic probabilities
 answersQ1_3topics <- tidy(answersQ1_3Topics_lda, matrix = "beta")
 
+# Get top 30 terms per topic
 top_termsQ1 <- answersQ1_3topics %>%
   group_by(topic) %>%
   top_n(30, beta) %>%
   ungroup() %>%
   arrange(topic, -beta)
 
+# Reshape for comparison cloud
 termsQ1<-dcast(as.data.table(top_termsQ1), term ~ topic, value.var = c("beta"))
 names<-termsQ1$term
 termsQ1<-termsQ1[,-c(1)]
@@ -141,6 +153,7 @@ termsQ1[is.na(termsQ1)]<-0
 termsQ1<-as.matrix(termsQ1)
 rownames(termsQ1)<-names
 
+# Plot word cloud comparing top terms across topics
 comparison.cloud(termsQ1,max.words=30,random.order=FALSE,scale=c(3,.1),title.size=1.4)
 
 ```
@@ -148,6 +161,7 @@ comparison.cloud(termsQ1,max.words=30,random.order=FALSE,scale=c(3,.1),title.siz
 ### Question 2
 
 ```{r Question 2 LDA Viz}
+# Repeat LDA visualization for Q2
 answersQ2_3topics <- tidy(answersQ2_3Topics_lda, matrix = "beta")
 
 top_termsQ2 <- answersQ2_3topics %>%
@@ -164,6 +178,7 @@ termsQ2[is.na(termsQ2)]<-0
 termsQ2<-as.matrix(termsQ2)
 rownames(termsQ2)<-names
 
+# Generate word cloud for Q2 topics
 comparison.cloud(termsQ2,max.words=30,random.order=FALSE,scale=c(3,.1),,title.size=1.4)
 
 ```
@@ -171,6 +186,7 @@ comparison.cloud(termsQ2,max.words=30,random.order=FALSE,scale=c(3,.1),,title.si
 ### Question 3
 
 ```{r Question 3 LDA Viz}
+# Repeat LDA visualization for Q3
 answersQ3_3topics <- tidy(answersQ3_3Topics_lda, matrix = "beta")
 
 top_termsQ3 <- answersQ3_3topics %>%
@@ -187,6 +203,7 @@ termsQ3[is.na(termsQ3)]<-0
 termsQ3<-as.matrix(termsQ3)
 rownames(termsQ3)<-names
 
+# Generate word cloud for Q3 topics
 comparison.cloud(termsQ3,max.words=30,random.order=FALSE,scale=c(3,.1),,title.size=1.4)
 
 ```
